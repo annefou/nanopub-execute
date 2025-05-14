@@ -1,0 +1,26 @@
+name: Process Nanopublication Submission
+
+on:
+  pull_request:
+    paths:
+      - 'submissions/*.json'
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v3
+
+      - name: Extract submission files
+        run: |
+          echo "🔍 Looking for nanopub submission JSON..."
+          ls submissions/
+          for f in submissions/*.json; do
+            echo "📄 Processing $f"
+            cat "$f"
+            URI=$(jq -r .uri "$f")
+            echo "🔗 Nanopub URI: $URI"
+            # Here you can replace this with actual processing logic, like:
+            # curl "$URI" -o downloaded.trig
+          done
