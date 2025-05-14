@@ -2,81 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Submit a Nanopublication</title>
-  <style>
-    body { font-family: sans-serif; padding: 2em; max-width: 700px; margin: auto; }
-    input, button, textarea { width: 100%; margin-top: 1em; font-size: 1em; }
-    button { cursor: pointer; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nanopublication Submission</title>
 </head>
 <body>
-  <h1>✨ Submit Your Nanopublication</h1>
-  <p>This will create a pull request with your nanopublication URI to trigger processing.</p>
-
+  <h1>Submit Nanopublication</h1>
   <form id="submit-form">
-    <label for="uri">Nanopublication URI:</label>
-    <input type="url" id="uri" name="uri" placeholder="https://w3id.org/np/..." required>
-
-    <label for="author">Your Name or GitHub Username (optional):</label>
-    <input type="text" id="author" name="author">
-
-    <label for="description">Optional Comment:</label>
-    <textarea id="description" name="description"></textarea>
-
+    <label for="uri">Nanopub URI:</label>
+    <input type="text" id="uri" name="uri" required><br>
+    <label for="author">Author:</label>
+    <input type="text" id="author" name="author" required><br>
+    <label for="description">Description:</label>
+    <textarea id="description" name="description" required></textarea><br>
     <button type="submit">Submit</button>
   </form>
 
-  <pre id="status"></pre>
+  <div id="result" style="display: none;">
+    <p>✅ Submission successful! View PR: <a id="pr-link" href="" target="_blank">PR Link</a></p>
+  </div>
 
   <script>
-    document.getElementById('submit-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const uri = document.getElementById('uri').value.trim();
-      const author = document.getElementById('author').value.trim();
-      const description = document.getElementById('description').value.trim();
+    const form = document.getElementById('submit-form');
+    const resultDiv = document.getElementById('result');
+    const prLink = document.getElementById('pr-link');
 
-      if (!uri.startsWith('http')) {
-        document.getElementById('status').textContent = 'Invalid URI';
-        return;
-      }
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
 
-      const filename = `submissions/${Date.now()}.json`;
-      const content = JSON.stringify({ uri, author, description }, null, 2);
-      const base64Content = btoa(unescape(encodeURIComponent(content)));
-
-      const body = {
-        title: `Nanopub Submission: ${uri}`,
-        head: `auto-submission-${Date.now()}`,
-        base: "main",
-        changes: [
-          {
-            files: {
-              [filename]: {
-                content: content
-              }
-            },
-            commit: `Add submission for nanopub ${uri}`
-          }
-        ]
+      const formData = new FormData(form);
+      const data = {
+        uri: formData.get('uri'),
+        author: formData.get('author'),
+        description: formData.get('description'),
       };
 
       try {
-        const res = await fetch("/.netlify/functions/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uri, author, description }),
+        const response = await fetch('/.netlify/functions/submit', {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: { 'Content-Type': 'application/json' },
         });
 
-        const result = await res.json();
-        if (res.ok) {
-          document.getElementById('status').textContent = `✅ Submission successful! View PR: ${result.html_url}`;
+        const responseBody = await response.json();
+        if (response.ok && responseBody.success) {
+          // If submission is successful, show the PR link
+          prLink.href = responseBody.pr_link;
+          prLink.textContent = responseBody.pr_link;
+          resultDiv.style.display = 'block';
         } else {
-          document.getElementById('status').textContent = `❌ Error: ${result.message}`;
+          alert('Submission failed: ' + (responseBody.message || 'Unknown error'));
         }
-      } catch (err) {
-        document.getElementById('status').textContent = `❌ Failed: ${err.message}`;
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error submitting form');
       }
     });
   </script>
 </body>
 </html>
+
