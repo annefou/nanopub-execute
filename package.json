@@ -1,0 +1,23 @@
+{
+  "name": "nanopub-execute",
+  "version": "1.0.0",
+  "description": "Execute an executable Nanopublication",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/annefou/nanopub-execute.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/annefou/nanopub-execute/issues"
+  },
+  "homepage": "https://github.com/annefou/nanopub-execute#readme",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}
