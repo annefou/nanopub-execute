@@ -32,6 +32,8 @@ exports.handler = async (event) => {
   });
 
   const json = await res.json();
+  console.log("GitHub API Response (file upload):", json);  // Debugging line
+
   if (!res.ok) {
     return { statusCode: res.status, body: JSON.stringify(json) };
   }
@@ -53,6 +55,8 @@ exports.handler = async (event) => {
   });
 
   const prJson = await prRes.json();
+  console.log("GitHub API Response (PR creation):", prJson);  // Debugging line
+
   if (!prRes.ok) {
     return { statusCode: prRes.status, body: JSON.stringify(prJson) };
   }
