@@ -10,14 +10,37 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: "Invalid URI" };
   }
 
-  const filename = `submissions/${Date.now()}.json`;
+  const timestamp = Date.now();
+  const branchName = `submission-${timestamp}`;
+  const filename = `submissions/${timestamp}.json`;
   const content = JSON.stringify({ uri, author, description }, null, 2);
 
   const token = process.env.GITHUB_PAT;
   const repo = "annefou/nanopub-execute";
 
-  // Upload file to GitHub
-  const res = await fetch(`https://api.github.com/repos/${repo}/contents/${filename}`, {
+  // Step 1: Create a new branch
+  const createBranchRes = await fetch(`https://api.github.com/repos/${repo}/git/refs`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "User-Agent": "nanopub-submitter",
+      Accept: "application/vnd.github.v3+json",
+    },
+    body: JSON.stringify({
+      ref: `refs/heads/${branchName}`,
+      sha: await getMainBranchSHA(token, repo),
+    }),
+  });
+
+  const createBranchJson = await createBranchRes.json();
+  console.log("GitHub API Response (create branch):", createBranchJson);  // Debugging line
+
+  if (!createBranchRes.ok) {
+    return { statusCode: createBranchRes.status, body: JSON.stringify(createBranchJson) };
+  }
+
+  // Step 2: Upload the file to the new branch
+  const uploadFileRes = await fetch(`https://api.github.com/repos/${repo}/contents/${filename}`, {
     method: "PUT",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -27,18 +50,18 @@ exports.handler = async (event) => {
     body: JSON.stringify({
       message: `Add submission for ${uri}`,
       content: Buffer.from(content).toString("base64"),
-      branch: "main",
+      branch: branchName,
     })
   });
 
-  const json = await res.json();
-  console.log("GitHub API Response (file upload):", json);  // Debugging line
+  const uploadFileJson = await uploadFileRes.json();
+  console.log("GitHub API Response (file upload):", uploadFileJson);  // Debugging line
 
-  if (!res.ok) {
-    return { statusCode: res.status, body: JSON.stringify(json) };
+  if (!uploadFileRes.ok) {
+    return { statusCode: uploadFileRes.status, body: JSON.stringify(uploadFileJson) };
   }
 
-  // Create a pull request (if needed) - optional step to automatically create PR
+  // Step 3: Create a PR from the new branch to the main branch
   const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls`, {
     method: "POST",
     headers: {
@@ -48,8 +71,8 @@ exports.handler = async (event) => {
     },
     body: JSON.stringify({
       title: `Add submission for ${uri}`,
-      head: "main",  // The branch the file was pushed to
-      base: "main",  // The branch you want to merge into
+      head: branchName,  // The new branch
+      base: "main",  // The main branch you want to merge into
       body: `This PR adds a submission for ${uri} by ${author}.`,
     }),
   });
@@ -70,4 +93,19 @@ exports.handler = async (event) => {
     }),
   };
 };
+
+// Helper function to get the SHA of the main branch
+async function getMainBranchSHA(token, repo) {
+  const res = await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/main`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "User-Agent": "nanopub-submitter",
+      Accept: "application/vnd.github.v3+json",
+    },
+  });
+
+  const json = await res.json();
+  return json.object.sha;  // Return the SHA of the main branch
+}
 
