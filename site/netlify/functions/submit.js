@@ -14,7 +14,7 @@ exports.handler = async (event) => {
   const content = JSON.stringify({ uri, author, description }, null, 2);
 
   const token = process.env.GITHUB_PAT;
-  const repo = "your-user/your-repo";
+  const repo = "annefou/nanopub-execute";
 
   const res = await fetch(`https://api.github.com/repos/${repo}/contents/${filename}`, {
     method: "PUT",
