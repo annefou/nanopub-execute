@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submit a Nanopublication</title>
+  <style>
+    body { font-family: sans-serif; padding: 2em; max-width: 700px; margin: auto; }
+    input, button, textarea { width: 100%; margin-top: 1em; font-size: 1em; }
+    button { cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>✨ Submit Your Nanopublication</h1>
+  <p>This will create a pull request with your nanopublication URI to trigger processing.</p>
+
+  <form id="submit-form">
+    <label for="uri">Nanopublication URI:</label>
+    <input type="url" id="uri" name="uri" placeholder="https://w3id.org/np/..." required>
+
+    <label for="author">Your Name or GitHub Username (optional):</label>
+    <input type="text" id="author" name="author">
+
+    <label for="description">Optional Comment:</label>
+    <textarea id="description" name="description"></textarea>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <pre id="status"></pre>
+
+  <script>
+    document.getElementById('submit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const uri = document.getElementById('uri').value.trim();
+      const author = document.getElementById('author').value.trim();
+      const description = document.getElementById('description').value.trim();
+
+      if (!uri.startsWith('http')) {
+        document.getElementById('status').textContent = 'Invalid URI';
+        return;
+      }
+
+      const filename = `submissions/${Date.now()}.json`;
+      const content = JSON.stringify({ uri, author, description }, null, 2);
+      const base64Content = btoa(unescape(encodeURIComponent(content)));
+
+      const body = {
+        title: `Nanopub Submission: ${uri}`,
+        head: `auto-submission-${Date.now()}`,
+        base: "main",
+        changes: [
+          {
+            files: {
+              [filename]: {
+                content: content
+              }
+            },
+            commit: `Add submission for nanopub ${uri}`
+          }
+        ]
+      };
+
+      try {
+        const res = await fetch("/.netlify/functions/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uri, author, description }),
+        });
+
+        const result = await res.json();
+        if (res.ok) {
+          document.getElementById('status').textContent = `✅ Submission successful! View PR: ${result.html_url}`;
+        } else {
+          document.getElementById('status').textContent = `❌ Error: ${result.message}`;
+        }
+      } catch (err) {
+        document.getElementById('status').textContent = `❌ Failed: ${err.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
